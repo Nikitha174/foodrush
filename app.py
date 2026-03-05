@@ -8,8 +8,8 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 # ── Config ────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = "foodrush_secret_2024"
-DB_PATH = "food_order.db"
+app.secret_key = os.environ.get("SECRET_KEY", "foodrush_secret_2024")
+DB_PATH = os.environ.get("DB_PATH", "food_order.db")
 UPLOAD_FOLDER = os.path.join("static", "images", "uploads")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -155,6 +155,10 @@ def init_db():
         ]
         c.executemany("INSERT INTO food_items (name,category,price,rating,description,image,is_veg,tags) VALUES(?,?,?,?,?,?,?,?)", seeds)
     conn.commit(); conn.close()
+
+# Initialize database on app startup
+with app.app_context():
+    init_db()
 
 # ── PWA Routes ────────────────────────────────────────────────────────────────
 @app.route("/sw.js")
@@ -637,5 +641,4 @@ def admin_logout():
 
 
 if __name__ == "__main__":
-    init_db()
-    app.run(debug=True, port=5000)
+    app.run(debug=False, port=int(os.environ.get("PORT", 5000)))
