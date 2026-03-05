@@ -242,28 +242,58 @@
       });
     }
 
-    // Install prompt
+    // Install prompt - Enhanced for mobile support
     let deferredPrompt = null;
     const banner = document.getElementById('pwaInstallBanner');
     const installBtn = document.getElementById('pwaInstallBtn');
     const dismissBtn = document.getElementById('pwaInstallDismiss');
 
+    // Detect if app is already installed
+    const isAppInstalled = () => {
+      if (window.navigator.standalone === true) return true;
+      if (window.matchMedia('(display-mode: standalone)').matches) return true;
+      return false;
+    };
+
+    // Detect if it's iOS Safari
+    const isIOSSafari = () => {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    };
+
+    // Show install banner logic
+    const showInstallBanner = () => {
+      if (!localStorage.getItem('pwa-dismissed') && !isAppInstalled()) {
+        banner.style.display = 'flex';
+      }
+    };
+
+    // Listen for beforeinstallprompt (Chrome, Edge, Android)
     window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault();
       deferredPrompt = e;
-      // Show banner only if not previously dismissed
-      if (!localStorage.getItem('pwa-dismissed')) {
-        banner.style.display = 'flex';
-      }
+      showInstallBanner();
     });
 
+    // For iOS Safari, show banner as fallback
+    if (isIOSSafari() && !isAppInstalled()) {
+      showInstallBanner();
+    }
+
+    // Show banner on page load if conditions met (for browsers that fire event late)
+    window.addEventListener('load', showInstallBanner);
+
     installBtn?.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      banner.style.display = 'none';
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log('[PWA] Install outcome:', outcome);
-      deferredPrompt = null;
+      if (deferredPrompt) {
+        // Chrome/Edge install flow
+        banner.style.display = 'none';
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('[PWA] Install outcome:', outcome);
+        deferredPrompt = null;
+      } else if (isIOSSafari()) {
+        // iOS fallback - show instructions
+        alert('To install FoodRush:\n1. Tap the Share button\n2. Select "Add to Home Screen"\n3. Tap "Add"');
+      }
     });
 
     dismissBtn?.addEventListener('click', () => {
