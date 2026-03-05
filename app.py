@@ -156,10 +156,6 @@ def init_db():
         c.executemany("INSERT INTO food_items (name,category,price,rating,description,image,is_veg,tags) VALUES(?,?,?,?,?,?,?,?)", seeds)
     conn.commit(); conn.close()
 
-# Initialize database on app startup
-with app.app_context():
-    init_db()
-
 # ── PWA Routes ────────────────────────────────────────────────────────────────
 @app.route("/sw.js")
 def service_worker():
@@ -175,6 +171,13 @@ def service_worker():
 @app.context_processor
 def inject_globals():
     return {"current_user": get_current_user(), "cart_count": get_cart_count(get_session_id())}
+
+# ── Initialize Database ────────────────────────────────────────────────────────
+@app.before_request
+def startup():
+    if not hasattr(app, 'db_initialized'):
+        init_db()
+        app.db_initialized = True
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  AUTH ROUTES
@@ -641,4 +644,5 @@ def admin_logout():
 
 
 if __name__ == "__main__":
+    init_db()
     app.run(debug=False, port=int(os.environ.get("PORT", 5000)))
