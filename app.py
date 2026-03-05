@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from werkzeug.utils import secure_filename
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer  # type: ignore
 
 # ── Config ────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -14,6 +14,9 @@ UPLOAD_FOLDER = os.path.join("static", "images", "uploads")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Module-level flag for database initialization
+_db_initialized = False
 
 # ── Sentiment ─────────────────────────────────────────────────────────────────
 sia = SentimentIntensityAnalyzer()
@@ -175,9 +178,10 @@ def inject_globals():
 # ── Initialize Database ────────────────────────────────────────────────────────
 @app.before_request
 def startup():
-    if not hasattr(app, 'db_initialized'):
+    global _db_initialized
+    if not _db_initialized:
         init_db()
-        app.db_initialized = True
+        _db_initialized = True
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  AUTH ROUTES
@@ -602,7 +606,7 @@ def admin_add():
     image       = "default.png"
     if "image" in request.files:
         f = request.files["image"]
-        if f and allowed_file(f.filename):
+        if f and f.filename and allowed_file(f.filename):
             fn = secure_filename(f.filename)
             f.save(os.path.join(app.config["UPLOAD_FOLDER"], fn))
             image = "uploads/" + fn
